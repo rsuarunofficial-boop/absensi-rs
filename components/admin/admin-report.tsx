@@ -42,6 +42,34 @@ function minutesForPdf(value: number | null) {
   return value === null ? "Belum tercatat" : value ? `${value} menit` : "Tidak";
 }
 
+function sortRowsForPdf(rows: AdminReportRow[]) {
+  return [...rows].sort((a, b) => {
+    const dateOrder = a.workDate.localeCompare(b.workDate);
+    if (dateOrder !== 0) return dateOrder;
+
+    if (a.employeeNumber === null) return b.employeeNumber === null ? 0 : 1;
+    if (b.employeeNumber === null) return -1;
+
+    const aNumber = a.employeeNumber.trim();
+    const bNumber = b.employeeNumber.trim();
+    const aIsNumeric = /^\d+$/.test(aNumber);
+    const bIsNumeric = /^\d+$/.test(bNumber);
+
+    if (aIsNumeric && bIsNumeric) {
+      const aNumericValue = BigInt(aNumber);
+      const bNumericValue = BigInt(bNumber);
+      return aNumericValue < bNumericValue
+        ? -1
+        : aNumericValue > bNumericValue
+          ? 1
+          : 0;
+    }
+    if (aIsNumeric !== bIsNumeric) return aIsNumeric ? -1 : 1;
+
+    return aNumber.localeCompare(bNumber, "id", { numeric: true });
+  });
+}
+
 function createPdf(
   rows: AdminReportRow[],
   filters: AdminReportFilters,
@@ -104,6 +132,7 @@ function createPdf(
   const summaryEndY =
     (document as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable
       ?.finalY ?? 35;
+  const sortedRows = sortRowsForPdf(rows);
   autoTable(document, {
     startY: summaryEndY + 8,
     head: [[
@@ -120,7 +149,7 @@ function createPdf(
       "Pulang cepat",
       "Status",
     ]],
-    body: rows.map((row) => [
+    body: sortedRows.map((row) => [
       formatDate(row.workDate),
       row.employeeNumber ?? "-",
       row.employeeName,

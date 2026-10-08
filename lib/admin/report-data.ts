@@ -43,6 +43,13 @@ export type AdminReportRow = {
   earlyLeaveMinutes: number | null;
 };
 
+type ReportSchedule = {
+  name: string;
+  start: string | null;
+  end: string | null;
+  groupId: string | null;
+};
+
 export type AdminReportResult =
   | {
       error: null;
@@ -215,7 +222,7 @@ export async function getAdminReport(
   const groupById = new Map(
     (groupsResult.data ?? []).map((group) => [group.id, group.name])
   );
-  const scheduleById = new Map(
+  const scheduleById = new Map<string, ReportSchedule>(
     (schedulesResult.data ?? []).map((schedule) => [
       schedule.id,
       {
@@ -226,6 +233,14 @@ export async function getAdminReport(
       },
     ])
   );
+  const schedulesByGroupId = new Map<string, ReportSchedule[]>();
+  for (const schedule of schedulesResult.data ?? []) {
+    if (!schedule.group_id) continue;
+    const groupSchedules = schedulesByGroupId.get(schedule.group_id) ?? [];
+    const reportSchedule = scheduleById.get(schedule.id);
+    if (reportSchedule) groupSchedules.push(reportSchedule);
+    schedulesByGroupId.set(schedule.group_id, groupSchedules);
+  }
   const employeeById = new Map(employees.map((employee) => [employee.id, employee]));
 
   if (filters.unitId && !unitById.has(filters.unitId)) {
@@ -268,13 +283,27 @@ export async function getAdminReport(
       continue;
     }
 
-    const schedule = record.schedule_id
-      ? scheduleById.get(record.schedule_id)
-      : employee.work_schedule_id
+    const groupSchedules = employee.schedule_group_id
+      ? schedulesByGroupId.get(employee.schedule_group_id) ?? []
+      : [];
+    const schedule =
+      (record.schedule_id
+        ? scheduleById.get(record.schedule_id)
+        : undefined) ??
+      (employee.work_schedule_id
         ? scheduleById.get(employee.work_schedule_id)
-        : undefined;
+        : undefined) ??
+      (employee.employee_status === "harian"
+        ? groupSchedules.find(
+            (groupSchedule) =>
+              groupSchedule.name.trim().toLowerCase() === "reguler"
+          )
+        : undefined) ??
+      (groupSchedules.length === 1
+        ? groupSchedules[0]
+        : undefined);
     const expectedStart =
-      schedule?.start && schedule?.end
+      schedule?.start
         ? getExpectedTimestamp(record.work_date, schedule.start)
         : null;
     const crossesMidnight =
@@ -306,14 +335,17 @@ export async function getAdminReport(
         : schedule?.groupId
           ? groupById.get(schedule.groupId) ?? "Grup tidak ditemukan"
           : "Belum ditentukan",
-      scheduleName: schedule?.name ?? "Jadwal mengikuti grup",
+      scheduleName:
+        employee.employee_status === "harian"
+          ? "Reguler"
+          : schedule?.name ?? "Jadwal belum dipilih",
       scheduleStart: schedule?.start ?? null,
       scheduleEnd: schedule?.end ?? null,
       checkInAt: record.check_in_at,
       checkOutAt: record.check_out_at,
       status: record.status,
       lateMinutes:
-        expectedStart === null
+        expectedStart === null || !Number.isFinite(checkIn)
           ? null
           : minutesBetween(checkIn, expectedStart),
       earlyLeaveMinutes:

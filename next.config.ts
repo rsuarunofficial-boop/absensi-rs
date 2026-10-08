@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  allowedDevOrigins: ["192.168.0.123"],
+  allowedDevOrigins: ["192.168.2.10", "vportal.rsarun.com"],
   experimental: {
     agentFeedback: true,
   },
