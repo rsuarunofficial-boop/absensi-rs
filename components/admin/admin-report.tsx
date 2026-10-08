@@ -38,35 +38,51 @@ function formatMinutes(value: number | null) {
   return hours ? `${hours}j ${minutes}m` : `${minutes} menit`;
 }
 
+function formatWorkDuration(value: number | null) {
+  if (value === null) return "-";
+  const hours = Math.floor(value / 60);
+  const minutes = value % 60;
+  if (hours && minutes) return `${hours} jam ${minutes} menit`;
+  if (hours) return `${hours} jam`;
+  return `${minutes} menit`;
+}
+
 function minutesForPdf(value: number | null) {
   return value === null ? "Belum tercatat" : value ? `${value} menit` : "Tidak";
 }
 
 function sortRowsForPdf(rows: AdminReportRow[]) {
   return [...rows].sort((a, b) => {
-    const dateOrder = a.workDate.localeCompare(b.workDate);
-    if (dateOrder !== 0) return dateOrder;
+    let employeeOrder = 0;
+    if (a.employeeNumber === null) {
+      employeeOrder = b.employeeNumber === null ? 0 : 1;
+    } else if (b.employeeNumber === null) {
+      employeeOrder = -1;
+    } else {
+      const aNumber = a.employeeNumber.trim();
+      const bNumber = b.employeeNumber.trim();
+      const aIsNumeric = /^\d+$/.test(aNumber);
+      const bIsNumeric = /^\d+$/.test(bNumber);
 
-    if (a.employeeNumber === null) return b.employeeNumber === null ? 0 : 1;
-    if (b.employeeNumber === null) return -1;
-
-    const aNumber = a.employeeNumber.trim();
-    const bNumber = b.employeeNumber.trim();
-    const aIsNumeric = /^\d+$/.test(aNumber);
-    const bIsNumeric = /^\d+$/.test(bNumber);
-
-    if (aIsNumeric && bIsNumeric) {
-      const aNumericValue = BigInt(aNumber);
-      const bNumericValue = BigInt(bNumber);
-      return aNumericValue < bNumericValue
-        ? -1
-        : aNumericValue > bNumericValue
-          ? 1
-          : 0;
+      if (aIsNumeric && bIsNumeric) {
+        const aNumericValue = BigInt(aNumber);
+        const bNumericValue = BigInt(bNumber);
+        employeeOrder =
+          aNumericValue < bNumericValue
+            ? -1
+            : aNumericValue > bNumericValue
+              ? 1
+              : 0;
+      } else if (aIsNumeric !== bIsNumeric) {
+        employeeOrder = aIsNumeric ? -1 : 1;
+      } else {
+        employeeOrder = aNumber.localeCompare(bNumber, "id", {
+          numeric: true,
+        });
+      }
     }
-    if (aIsNumeric !== bIsNumeric) return aIsNumeric ? -1 : 1;
 
-    return aNumber.localeCompare(bNumber, "id", { numeric: true });
+    return employeeOrder || a.workDate.localeCompare(b.workDate);
   });
 }
 
@@ -147,7 +163,7 @@ function createPdf(
       "Terlambat",
       "Cek out",
       "Pulang cepat",
-      "Status",
+      "Total jam kerja",
     ]],
     body: sortedRows.map((row) => [
       formatDate(row.workDate),
@@ -161,7 +177,7 @@ function createPdf(
       minutesForPdf(row.lateMinutes),
       formatTime(row.checkOutAt),
       minutesForPdf(row.earlyLeaveMinutes),
-      row.status,
+      formatWorkDuration(row.totalWorkMinutes),
     ]),
     theme: "grid",
     styles: { fontSize: 7, cellPadding: 1.8, overflow: "linebreak" },
@@ -335,7 +351,7 @@ export function AdminReport({ result }: { result: AdminReportResult }) {
                     <tr>
                       <th className="px-4 py-3">Tanggal</th>
                       <th className="px-4 py-3">Karyawan</th>
-                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Status karyawan</th>
                       <th className="px-4 py-3">Unit</th>
                       <th className="px-4 py-3">Grup jadwal</th>
                       <th className="px-4 py-3">Jadwal</th>
@@ -343,7 +359,7 @@ export function AdminReport({ result }: { result: AdminReportResult }) {
                       <th className="px-4 py-3">Terlambat</th>
                       <th className="px-4 py-3">Cek out</th>
                       <th className="px-4 py-3">Pulang cepat</th>
-                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Total Jam Kerja</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -373,7 +389,9 @@ export function AdminReport({ result }: { result: AdminReportResult }) {
                         <td className={`whitespace-nowrap px-4 py-3 ${(row.earlyLeaveMinutes ?? 0) > 0 ? "font-semibold text-rose-700" : ""}`}>
                           {formatMinutes(row.earlyLeaveMinutes)}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3">{row.status}</td>
+                        <td className="whitespace-nowrap px-4 py-3">
+                          {formatWorkDuration(row.totalWorkMinutes)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
