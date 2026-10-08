@@ -29,11 +29,11 @@ export function LiveClock() {
 
   return (
     <div aria-live="off">
-      <p className="mt-1 text-4xl font-bold tracking-tight">
+      <p className="text-base font-extrabold tracking-tight sm:text-lg">
         {now ? timeFormatter.format(now) : "--:--"}
       </p>
-      <p className="mt-1 text-sm capitalize text-emerald-100">
-        {now ? dateFormatter.format(now) : "Memuat waktu..."}
+      <p className="text-[9px] capitalize text-blue-100">
+        {now ? dateFormatter.format(now) : "Memuat..."}
       </p>
     </div>
   );

@@ -80,20 +80,44 @@ export function AttendanceActions({
         <form action={checkInFormAction}>
           {needsScheduleChoice ? (
             <button
-              className="min-h-12 w-full rounded-2xl bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+              className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-2.5 text-left text-white shadow-sm shadow-emerald-800/15 transition hover:from-emerald-700 hover:to-emerald-600 disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-300 disabled:text-slate-500 sm:gap-2.5 sm:px-3"
               disabled={!canCheckIn || isCheckingIn}
               onClick={() => setIsScheduleDialogOpen(true)}
               type="button"
             >
-              Cek In
+              <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M10 17l5-5-5-5m5 5H3m11-9h4a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3h-4" />
+                </svg>
+              </span>
+              <span className="min-w-0">
+                <span className="block text-xs font-bold">
+                  {isCheckingIn ? "Menyimpan..." : "Cek In"}
+                </span>
+                <span className="block text-[9px] text-emerald-50">
+                  Mulai Jam Kerja
+                </span>
+              </span>
             </button>
           ) : (
             <button
-              className="min-h-12 w-full rounded-2xl bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+              className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-2.5 text-left text-white shadow-sm shadow-emerald-800/15 transition hover:from-emerald-700 hover:to-emerald-600 disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-300 disabled:text-slate-500 sm:gap-2.5 sm:px-3"
               disabled={!canSubmitCheckIn || isCheckingIn}
               type="submit"
             >
-              {isCheckingIn ? "Menyimpan..." : "Cek In"}
+              <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M10 17l5-5-5-5m5 5H3m11-9h4a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3h-4" />
+                </svg>
+              </span>
+              <span className="min-w-0">
+                <span className="block text-xs font-bold">
+                  {isCheckingIn ? "Menyimpan..." : "Cek In"}
+                </span>
+                <span className="block text-[9px] text-emerald-50">
+                  Mulai Jam Kerja
+                </span>
+              </span>
             </button>
           )}
           {needsScheduleChoice && (
@@ -224,11 +248,23 @@ export function AttendanceActions({
         </form>
         <form action={checkOutFormAction}>
           <button
-            className="min-h-12 w-full rounded-2xl bg-rose-700 px-4 text-sm font-semibold text-white transition hover:bg-rose-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+            className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-500 to-red-500 px-2.5 text-left text-white shadow-sm shadow-rose-800/15 transition hover:from-rose-600 hover:to-red-600 disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-300 disabled:text-slate-500 sm:gap-2.5 sm:px-3"
             disabled={!canCheckOut || isCheckingOut}
             type="submit"
           >
-            {isCheckingOut ? "Menyimpan..." : "Cek Out"}
+            <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M14 7l-5 5 5 5m-5-5h12M10 3H6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h4" />
+              </svg>
+            </span>
+            <span className="min-w-0">
+              <span className="block text-xs font-bold">
+                {isCheckingOut ? "Menyimpan..." : "Cek Out"}
+              </span>
+              <span className="block text-[9px] text-rose-50">
+                Akhiri Jam Kerja
+              </span>
+            </span>
           </button>
         </form>
       </div>
