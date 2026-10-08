@@ -1,0 +1,17 @@
+{
+  "name": "Absensi RS Arun Lhokseumawe",
+  "short_name": "Absensi Arun",
+  "description": "Aplikasi presensi karyawan RS Arun Lhokseumawe",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#059669",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
