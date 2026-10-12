@@ -26,8 +26,12 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
   },
   icons: {
-    icon: "/icon.svg",
-    apple: "/icon.svg",
+    icon: [
+      { url: "/favicon/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon/favicon-96x96.png", sizes: "96x96", type: "image/png" },
+    ],
+    shortcut: "/favicon/favicon.ico",
+    apple: "/favicon/apple-touch-icon.png",
   },
 };
 
