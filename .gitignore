@@ -17,6 +17,11 @@
 /.next/
 /out/
 /supabase
+!/supabase/
+/supabase/*
+!/supabase/migrations/
+/supabase/migrations/*
+!/supabase/migrations/20261019210500_add_employee_employment_status.sql
 
 # production
 /build

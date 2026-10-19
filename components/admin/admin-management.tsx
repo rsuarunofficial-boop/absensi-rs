@@ -10,7 +10,7 @@ import {
   type AdminActionState,
 } from "@/lib/admin/actions";
 import type { AdminManagementData } from "@/lib/admin/management-data";
-import { EmployeeScheduleGroupForm } from "@/components/admin/employee-schedule-group-form";
+import { EmployeeStatusManagement } from "@/components/admin/employee-status-management";
 
 const initialState: AdminActionState = { status: "idle", message: "" };
 
@@ -324,36 +324,11 @@ export function AdminManagement({ data }: { data: AdminManagementData }) {
         )}
 
         {activeTab === "employee-groups" && (
-          <div>
-            <h3 className="font-semibold text-slate-900">
-              Status dan grup jadwal karyawan
-            </h3>
-            <p className="mt-1 text-sm text-slate-500">
-              Atur karyawan lama ke status Harian atau Shift dan tentukan grup
-              jadwalnya. Karyawan berstatus Shift akan melihat pilihan shift
-              dari grup ini saat cek in.
-            </p>
-            {!data.groups.length && (
-              <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
-                Buat grup jadwal terlebih dahulu.
-              </p>
-            )}
-            {data.employees.length ? (
-              <div className="mt-4 space-y-3">
-                {data.employees.map((employee) => (
-                  <EmployeeScheduleGroupForm
-                    employee={employee}
-                    groups={data.groups}
-                    key={employee.id}
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="mt-4 text-sm text-slate-500">
-                Belum ada data karyawan.
-              </p>
-            )}
-          </div>
+          <EmployeeStatusManagement
+            employees={data.employees}
+            groups={data.groups}
+            units={data.units}
+          />
         )}
 
         {activeTab === "units" && (

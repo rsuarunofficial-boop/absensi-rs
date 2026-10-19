@@ -13,6 +13,13 @@ export type ManagementEmployee = {
   full_name: string;
   employee_number: string | null;
   employee_status: "harian" | "shift";
+  employment_status:
+    | "aktif"
+    | "nonaktif"
+    | "suspend"
+    | "cuti"
+    | "kontrak";
+  unit_id: string | null;
   schedule_group_id: string | null;
 };
 
@@ -66,7 +73,7 @@ export async function getAdminManagementData(): Promise<AdminManagementData> {
     supabase
       .from("employee_profiles")
       .select(
-        "id, full_name, employee_number, employee_status, schedule_group_id"
+        "id, full_name, employee_number, employee_status, employment_status, unit_id, schedule_group_id"
       )
       .eq("role", "karyawan")
       .order("full_name")

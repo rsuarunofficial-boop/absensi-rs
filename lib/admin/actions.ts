@@ -231,6 +231,182 @@ export async function updateEmployeeScheduleGroup(
   };
 }
 
+export async function updateEmployeeManagement(
+  _previousState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  const admin = await verifyAdmin();
+  if (!admin.ok) return failed("Aksi ini hanya tersedia untuk admin.");
+
+  const employeeId = readText(formData, "employee_id", 36);
+  const unitId = readText(formData, "unit_id", 36);
+  const groupId = readText(formData, "group_id", 36);
+  const employeeStatus = readText(formData, "employee_status", 10);
+  const employmentStatus = readText(formData, "employment_status", 20);
+
+  if (!employeeId || !unitId || !groupId) {
+    return failed("Pilih karyawan, unit kerja, dan grup jadwal.");
+  }
+  if (employeeStatus !== "harian" && employeeStatus !== "shift") {
+    return failed("Pilih tipe jadwal Harian atau Shift.");
+  }
+  if (
+    employmentStatus !== "aktif" &&
+    employmentStatus !== "nonaktif" &&
+    employmentStatus !== "suspend" &&
+    employmentStatus !== "cuti" &&
+    employmentStatus !== "kontrak"
+  ) {
+    return failed("Pilih status kepegawaian yang valid.");
+  }
+
+  const [
+    { data: employee, error: employeeError },
+    { data: unit, error: unitError },
+    { data: group, error: groupError },
+  ] = await Promise.all([
+    admin.supabase
+      .from("employee_profiles")
+      .select("id")
+      .eq("id", employeeId)
+      .eq("role", "karyawan")
+      .maybeSingle(),
+    admin.supabase
+      .from("work_units")
+      .select("id, name")
+      .eq("id", unitId)
+      .maybeSingle(),
+    admin.supabase
+      .from("schedule_groups")
+      .select("id, name")
+      .eq("id", groupId)
+      .maybeSingle(),
+  ]);
+
+  if (employeeError || unitError || groupError) {
+    console.error("Failed to validate employee management update:", {
+      employeeError,
+      unitError,
+      groupError,
+    });
+    return failed("Data karyawan, unit, atau grup tidak dapat diverifikasi.");
+  }
+  if (!employee || !unit || !group) {
+    return failed("Karyawan, unit kerja, atau grup jadwal tidak ditemukan.");
+  }
+
+  const { error } = await admin.supabase
+    .from("employee_profiles")
+    .update({
+      department: unit.name,
+      unit_id: unit.id,
+      employee_status: employeeStatus,
+      employment_status: employmentStatus,
+      schedule_group_id: group.id,
+      shift_name: group.name,
+    })
+    .eq("id", employee.id)
+    .eq("role", "karyawan");
+
+  if (error) {
+    console.error("Failed to update employee management data:", error);
+    return failed("Data karyawan gagal diperbarui.");
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/data");
+  revalidatePath("/");
+  revalidatePath("/profil");
+  revalidatePath("/admin/laporan");
+  return { status: "success", message: "Data karyawan berhasil diperbarui." };
+}
+
+export async function resetEmployeePassword(
+  _previousState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  const admin = await verifyAdmin();
+  if (!admin.ok) return failed("Aksi ini hanya tersedia untuk admin.");
+  if (!isAdminClientConfigured()) {
+    return failed(
+      "Reset password belum dikonfigurasi. Tambahkan SUPABASE_SERVICE_ROLE_KEY ke environment server."
+    );
+  }
+
+  const employeeId = readText(formData, "employee_id", 36);
+  const passwordValue = formData.get("new_password");
+  const password =
+    typeof passwordValue === "string" ? passwordValue : "";
+  if (!employeeId) return failed("Karyawan tidak valid.");
+  if (password.length < 8 || password.length > 72) {
+    return failed("Password harus terdiri dari 8–72 karakter.");
+  }
+
+  const { data: employee, error: employeeError } = await admin.supabase
+    .from("employee_profiles")
+    .select("id")
+    .eq("id", employeeId)
+    .eq("role", "karyawan")
+    .maybeSingle();
+
+  if (employeeError) {
+    console.error("Failed to verify employee before password reset:", employeeError);
+    return failed("Data karyawan tidak dapat diverifikasi.");
+  }
+  if (!employee) return failed("Karyawan tidak ditemukan.");
+
+  const { error } = await createAdminClient().auth.admin.updateUserById(
+    employee.id,
+    { password }
+  );
+  if (error) {
+    console.error("Failed to reset employee password:", error);
+    return failed("Password karyawan gagal direset.");
+  }
+
+  return { status: "success", message: "Password karyawan berhasil direset." };
+}
+
+export async function deleteEmployee(
+  _previousState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  const admin = await verifyAdmin();
+  if (!admin.ok) return failed("Aksi ini hanya tersedia untuk admin.");
+  if (!isAdminClientConfigured()) {
+    return failed(
+      "Penghapusan akun belum dikonfigurasi. Tambahkan SUPABASE_SERVICE_ROLE_KEY ke environment server."
+    );
+  }
+
+  const employeeId = readText(formData, "employee_id", 36);
+  if (!employeeId) return failed("Karyawan tidak valid.");
+
+  const { data: employee, error: employeeError } = await admin.supabase
+    .from("employee_profiles")
+    .select("id")
+    .eq("id", employeeId)
+    .eq("role", "karyawan")
+    .maybeSingle();
+
+  if (employeeError) {
+    console.error("Failed to verify employee before deletion:", employeeError);
+    return failed("Data karyawan tidak dapat diverifikasi.");
+  }
+  if (!employee) return failed("Karyawan tidak ditemukan.");
+
+  const { error } = await createAdminClient().auth.admin.deleteUser(employee.id);
+  if (error) {
+    console.error("Failed to delete employee account:", error);
+    return failed("Akun karyawan gagal dihapus.");
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/data");
+  revalidatePath("/admin/laporan");
+  return { status: "success", message: "Karyawan berhasil dihapus." };
+}
+
 export async function createWorkSchedule(
   _previousState: AdminActionState,
   formData: FormData
