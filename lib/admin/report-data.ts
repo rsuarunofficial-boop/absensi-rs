@@ -32,7 +32,6 @@ export type AdminReportRow = {
   employeeStatus: "harian" | "shift";
   unitId: string | null;
   unitName: string;
-  groupName: string;
   scheduleName: string;
   scheduleStart: string | null;
   scheduleEnd: string | null;
@@ -156,14 +155,12 @@ export async function getAdminReport(
   const [
     unitsResult,
     schedulesResult,
-    groupsResult,
     employeesResult,
   ] = await Promise.all([
     supabase.from("work_units").select("id, name").order("name"),
     supabase
       .from("work_schedules")
       .select("id, name, start_time, end_time, group_id"),
-    supabase.from("schedule_groups").select("id, name"),
     supabase
       .from("employee_profiles")
       .select(
@@ -177,13 +174,11 @@ export async function getAdminReport(
   if (
     unitsResult.error ||
     schedulesResult.error ||
-    groupsResult.error ||
     employeesResult.error
   ) {
     console.error("Failed to load admin report metadata:", {
       unitsError: unitsResult.error,
       schedulesError: schedulesResult.error,
-      groupsError: groupsResult.error,
       employeesError: employeesResult.error,
     });
     return {
@@ -220,9 +215,6 @@ export async function getAdminReport(
     }
   }
   const unitById = new Map(units.map((unit) => [unit.id, unit.name]));
-  const groupById = new Map(
-    (groupsResult.data ?? []).map((group) => [group.id, group.name])
-  );
   const scheduleById = new Map<string, ReportSchedule>(
     (schedulesResult.data ?? []).map((schedule) => [
       schedule.id,
@@ -341,11 +333,6 @@ export async function getAdminReport(
       unitName: employee.unit_id
         ? unitById.get(employee.unit_id) ?? "Unit tidak ditemukan"
         : "Belum ditentukan",
-      groupName: employee.schedule_group_id
-        ? groupById.get(employee.schedule_group_id) ?? "Grup tidak ditemukan"
-        : schedule?.groupId
-          ? groupById.get(schedule.groupId) ?? "Grup tidak ditemukan"
-          : "Belum ditentukan",
       scheduleName:
         employee.employee_status === "harian"
           ? "Reguler"

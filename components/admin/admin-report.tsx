@@ -191,7 +191,6 @@ function createPdf(
       "Nama karyawan",
       "Status karyawan",
       "Unit kerja",
-      "Grup jadwal",
       "Jadwal",
       "Status presensi",
       "Cek in",
@@ -206,7 +205,6 @@ function createPdf(
       row.employeeName,
       row.employeeStatus === "shift" ? "Shift" : "Harian",
       row.unitName,
-      row.groupName,
       `${row.scheduleName} (${row.scheduleStart ?? "--:--"}-${row.scheduleEnd ?? "--:--"})`,
       attendanceStatusLabels[row.attendanceStatus],
       formatTime(row.checkInAt),
@@ -389,7 +387,6 @@ export function AdminReport({ result }: { result: AdminReportResult }) {
                       <th className="px-4 py-3">Karyawan</th>
                       <th className="px-4 py-3">Status karyawan</th>
                       <th className="px-4 py-3">Unit</th>
-                      <th className="px-4 py-3">Grup jadwal</th>
                       <th className="px-4 py-3">Jadwal</th>
                       <th className="px-4 py-3">Status presensi</th>
                       <th className="px-4 py-3">Cek in</th>
@@ -411,7 +408,6 @@ export function AdminReport({ result }: { result: AdminReportResult }) {
                           {row.employeeStatus === "shift" ? "Shift" : "Harian"}
                         </td>
                         <td className="whitespace-nowrap px-4 py-3">{row.unitName}</td>
-                        <td className="whitespace-nowrap px-4 py-3">{row.groupName}</td>
                         <td className="whitespace-nowrap px-4 py-3">
                           {row.scheduleName}
                           <span className="block text-xs text-slate-500">
