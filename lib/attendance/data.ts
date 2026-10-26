@@ -111,6 +111,27 @@ export async function getTodayAttendance(): Promise<
   const userIdResult = await getCurrentUserId();
   if (userIdResult.error) return userIdResult;
 
+  const now = new Date();
+  const activeSince = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const supabase = await createClient();
+  const { data: activeAttendance, error: activeError } = await supabase
+    .from("attendance_records")
+    .select("id, work_date, check_in_at, check_out_at, schedule_id, status")
+    .eq("user_id", userIdResult.data)
+    .is("check_out_at", null)
+    .gte("check_in_at", activeSince.toISOString())
+    .lte("check_in_at", now.toISOString())
+    .order("check_in_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (activeError) {
+    console.error("Failed to load active attendance:", activeError);
+    return { data: null, error: "Presensi aktif tidak dapat dimuat." };
+  }
+
+  if (activeAttendance) return { data: activeAttendance, error: null };
+
   const currentDate = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Jakarta",
     year: "numeric",
@@ -118,7 +139,6 @@ export async function getTodayAttendance(): Promise<
     day: "2-digit",
   }).format(new Date());
 
-  const supabase = await createClient();
   const { data, error } = await supabase
     .from("attendance_records")
     .select("id, work_date, check_in_at, check_out_at, schedule_id, status")

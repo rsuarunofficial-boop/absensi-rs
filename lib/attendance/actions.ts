@@ -24,13 +24,6 @@ function getWorkDate() {
   }).format(new Date());
 }
 
-function getPreviousWorkDate(workDate: string) {
-  const [year, month, day] = workDate.split("-").map(Number);
-  return new Date(Date.UTC(year, month - 1, day - 1))
-    .toISOString()
-    .slice(0, 10);
-}
-
 async function getEmployeeContext(): Promise<EmployeeContext> {
   const supabase = await createClient();
   const { data: userData, error: authError } = await supabase.auth.getUser();
@@ -129,6 +122,34 @@ export async function checkInAttendance(
     }
   }
 
+  const now = new Date();
+  const activeSince = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const { data: activeAttendance, error: activeError } = await context.supabase
+    .from("attendance_records")
+    .select("id")
+    .eq("user_id", context.userId)
+    .is("check_out_at", null)
+    .gte("check_in_at", activeSince.toISOString())
+    .lte("check_in_at", now.toISOString())
+    .order("check_in_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (activeError) {
+    console.error("Failed to check for active attendance:", activeError);
+    return {
+      status: "error",
+      message: "Presensi aktif tidak dapat diperiksa.",
+    };
+  }
+
+  if (activeAttendance) {
+    return {
+      status: "error",
+      message: "Anda masih memiliki sesi presensi yang belum cek out.",
+    };
+  }
+
   const { data: existing, error: lookupError } = await context.supabase
     .from("attendance_records")
     .select("id")
@@ -152,7 +173,7 @@ export async function checkInAttendance(
     .insert({
       user_id: context.userId,
       work_date: context.workDate,
-      check_in_at: new Date().toISOString(),
+      check_in_at: now.toISOString(),
       schedule_id: scheduleId,
     });
 
@@ -174,46 +195,37 @@ export async function checkOutAttendance(
   const context = await getEmployeeContext();
   if (!context.ok) return { status: "error", message: context.error };
 
-  const attendanceDates = [
-    context.workDate,
-    getPreviousWorkDate(context.workDate),
-  ];
-  let attendance: { id: string } | null = null;
+  const now = new Date();
+  const activeSince = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const { data: attendance, error: lookupError } = await context.supabase
+    .from("attendance_records")
+    .select("id")
+    .eq("user_id", context.userId)
+    .is("check_out_at", null)
+    .gte("check_in_at", activeSince.toISOString())
+    .lte("check_in_at", now.toISOString())
+    .order("check_in_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  for (const workDate of attendanceDates) {
-    const { data, error } = await context.supabase
-      .from("attendance_records")
-      .select("id")
-      .eq("user_id", context.userId)
-      .eq("work_date", workDate)
-      .is("check_out_at", null)
-      .order("check_in_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
-      console.error("Failed to find attendance for check-out:", error);
-      return {
-        status: "error",
-        message: "Data cek in hari ini tidak dapat diperiksa.",
-      };
-    }
-    if (data) {
-      attendance = data;
-      break;
-    }
+  if (lookupError) {
+    console.error("Failed to find active attendance for check-out:", lookupError);
+    return {
+      status: "error",
+      message: "Data presensi aktif tidak dapat diperiksa.",
+    };
   }
 
   if (!attendance) {
     return {
       status: "error",
-      message: "Belum ada cek in yang dapat dipasangkan dengan cek out.",
+      message: "Tidak ada sesi presensi aktif dalam 24 jam terakhir.",
     };
   }
 
   const { data: updatedAttendance, error: updateError } = await context.supabase
     .from("attendance_records")
-    .update({ check_out_at: new Date().toISOString() })
+    .update({ check_out_at: now.toISOString() })
     .eq("id", attendance.id)
     .eq("user_id", context.userId)
     .is("check_out_at", null)
@@ -226,7 +238,7 @@ export async function checkOutAttendance(
   }
 
   if (!updatedAttendance) {
-    return { status: "error", message: "Cek out hari ini sudah tercatat." };
+    return { status: "error", message: "Sesi presensi ini sudah diakhiri." };
   }
 
   revalidatePath("/");
