@@ -22,12 +22,46 @@ const dateFormatter = new Intl.DateTimeFormat("id-ID", {
   timeZone: "Asia/Jakarta",
 });
 
+const calendarDateFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Jakarta",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+const dateTimeFormatter = new Intl.DateTimeFormat("id-ID", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Asia/Jakarta",
+});
+
+const attendanceStatusLabels: Record<AdminReportRow["attendanceStatus"], string> = {
+  hadir: "Hadir",
+  terlambat: "Terlambat",
+  izin: "Izin",
+  sakit: "Sakit",
+  cuti: "Cuti",
+};
+
 function formatDate(value: string) {
   return dateFormatter.format(new Date(`${value}T12:00:00+07:00`));
 }
 
 function formatTime(value: string | null) {
   return value ? `${timeFormatter.format(new Date(value))} WIB` : "Belum cek out";
+}
+
+function formatCheckOutTime(value: string | null, checkInAt: string) {
+  if (!value) return formatTime(value);
+  const checkInDate = calendarDateFormatter.format(new Date(checkInAt));
+  const checkOutDate = calendarDateFormatter.format(new Date(value));
+
+  return checkOutDate === checkInDate
+    ? formatTime(value)
+    : `${dateTimeFormatter.format(new Date(value))} WIB`;
 }
 
 function formatMinutes(value: number | null) {
@@ -159,6 +193,7 @@ function createPdf(
       "Unit kerja",
       "Grup jadwal",
       "Jadwal",
+      "Status presensi",
       "Cek in",
       "Terlambat",
       "Cek out",
@@ -173,9 +208,10 @@ function createPdf(
       row.unitName,
       row.groupName,
       `${row.scheduleName} (${row.scheduleStart ?? "--:--"}-${row.scheduleEnd ?? "--:--"})`,
+      attendanceStatusLabels[row.attendanceStatus],
       formatTime(row.checkInAt),
       minutesForPdf(row.lateMinutes),
-      formatTime(row.checkOutAt),
+      formatCheckOutTime(row.checkOutAt, row.checkInAt),
       minutesForPdf(row.earlyLeaveMinutes),
       formatWorkDuration(row.totalWorkMinutes),
     ]),
@@ -278,7 +314,7 @@ export function AdminReport({ result }: { result: AdminReportResult }) {
           </div>
         </form>
         <p className="mt-3 text-xs text-slate-500">
-          Maksimal rentang 366 hari. Keterlambatan dan pulang cepat dihitung dari jadwal kerja yang dipetakan ke karyawan. Waktu memakai WIB. Laporan merangkum catatan presensi tersimpan; hari tanpa catatan tidak otomatis dihitung sebagai absen karena kalender hari kerja belum diatur.
+          Maksimal rentang 366 hari. Tanggal laporan mengikuti tanggal Check-In, sehingga shift lintas tanggal tetap menjadi satu catatan; durasi dihitung sampai waktu Check-Out. Keterlambatan dan pulang cepat dihitung dari jadwal kerja yang dipetakan ke karyawan. Waktu memakai WIB. Hari tanpa catatan tidak otomatis dihitung sebagai absen karena kalender hari kerja belum diatur.
         </p>
       </section>
 
@@ -355,6 +391,7 @@ export function AdminReport({ result }: { result: AdminReportResult }) {
                       <th className="px-4 py-3">Unit</th>
                       <th className="px-4 py-3">Grup jadwal</th>
                       <th className="px-4 py-3">Jadwal</th>
+                      <th className="px-4 py-3">Status presensi</th>
                       <th className="px-4 py-3">Cek in</th>
                       <th className="px-4 py-3">Terlambat</th>
                       <th className="px-4 py-3">Cek out</th>
@@ -381,11 +418,14 @@ export function AdminReport({ result }: { result: AdminReportResult }) {
                             {row.scheduleStart ?? "--:--"}–{row.scheduleEnd ?? "--:--"}
                           </span>
                         </td>
+                        <td className="whitespace-nowrap px-4 py-3">
+                          {attendanceStatusLabels[row.attendanceStatus]}
+                        </td>
                         <td className="whitespace-nowrap px-4 py-3">{formatTime(row.checkInAt)}</td>
                         <td className={`whitespace-nowrap px-4 py-3 ${(row.lateMinutes ?? 0) > 0 ? "font-semibold text-amber-700" : ""}`}>
                           {formatMinutes(row.lateMinutes)}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3">{formatTime(row.checkOutAt)}</td>
+                        <td className="whitespace-nowrap px-4 py-3">{formatCheckOutTime(row.checkOutAt, row.checkInAt)}</td>
                         <td className={`whitespace-nowrap px-4 py-3 ${(row.earlyLeaveMinutes ?? 0) > 0 ? "font-semibold text-rose-700" : ""}`}>
                           {formatMinutes(row.earlyLeaveMinutes)}
                         </td>

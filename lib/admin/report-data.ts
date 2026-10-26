@@ -36,6 +36,7 @@ export type AdminReportRow = {
   scheduleName: string;
   scheduleStart: string | null;
   scheduleEnd: string | null;
+  attendanceStatus: "hadir" | "terlambat" | "izin" | "sakit" | "cuti";
   checkInAt: string;
   checkOutAt: string | null;
   totalWorkMinutes: number | null;
@@ -256,7 +257,7 @@ export async function getAdminReport(
   for (let offset = 0; ; offset += 1000) {
     const { data, error } = await supabase
       .from("attendance_records")
-      .select("id, user_id, work_date, check_in_at, check_out_at, schedule_id")
+      .select("id, user_id, work_date, check_in_at, check_out_at, schedule_id, status")
       .gte("work_date", filters.from)
       .lte("work_date", filters.to)
       .order("work_date", { ascending: false })
@@ -324,6 +325,10 @@ export async function getAdminReport(
       !Number.isFinite(checkOut)
         ? null
         : Math.max(0, Math.floor((checkOut - checkIn) / 60_000));
+    const lateMinutes =
+      expectedStart === null || !Number.isFinite(checkIn)
+        ? null
+        : minutesBetween(checkIn, expectedStart);
 
     rows.push({
       id: record.id,
@@ -347,13 +352,14 @@ export async function getAdminReport(
           : schedule?.name ?? "Jadwal belum dipilih",
       scheduleStart: schedule?.start ?? null,
       scheduleEnd: schedule?.end ?? null,
+      attendanceStatus:
+        record.status === "hadir" && lateMinutes !== null && lateMinutes > 0
+          ? "terlambat"
+          : record.status,
       checkInAt: record.check_in_at,
       checkOutAt: record.check_out_at,
       totalWorkMinutes,
-      lateMinutes:
-        expectedStart === null || !Number.isFinite(checkIn)
-          ? null
-          : minutesBetween(checkIn, expectedStart),
+      lateMinutes,
       earlyLeaveMinutes:
         expectedEnd === null || checkOut === null
           ? null
