@@ -31,19 +31,16 @@ export async function proxy(request: NextRequest) {
 
   if (error && error.name !== "AuthSessionMissingError") {
     console.error("Supabase session verification failed:", error);
-    return NextResponse.json(
-      { error: "Layanan autentikasi sementara tidak tersedia." },
-      { status: 503 }
-    );
   }
 
+  const authenticatedUser = error ? null : user;
   const isLoginPage = request.nextUrl.pathname === "/login";
 
-  if (!user && !isLoginPage) {
+  if (!authenticatedUser && !isLoginPage) {
     return redirectWithCookies(request, response, "/login");
   }
 
-  if (user && isLoginPage) {
+  if (authenticatedUser && isLoginPage) {
     return redirectWithCookies(request, response, "/");
   }
 
